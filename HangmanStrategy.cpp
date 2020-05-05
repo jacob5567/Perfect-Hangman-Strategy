@@ -11,8 +11,9 @@
 
 using namespace std;
 
-#define RESERVED_SIZE 10000
-#define INPUT_FILE "dictionary.txt"
+#define RESERVED_SIZE 1000
+#define INPUT_FILE "dictionary_small.txt"
+#define OUTPUT_FILE "results_small.txt"
 
 int main(int argc, char *argv[])
 {
@@ -161,7 +162,7 @@ int main(int argc, char *argv[])
             }
         }
         ofstream outfile;
-        outfile.open("results.txt", ios::app);
+        outfile.open(OUTPUT_FILE, ios::app);
         outfile << revealedText << ", " << guesses << endl;
         outfile.close();
     }
