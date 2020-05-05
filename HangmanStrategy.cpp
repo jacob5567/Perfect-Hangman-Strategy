@@ -51,7 +51,6 @@ int main(int argc, char *argv[])
     for (string word : words)
     {
         int len = word.length();
-        // TODO number of guesses + extract this whole thing into a loop
 
         string revealedText = "";
         for (int i = 0; i < len; i++)
@@ -63,90 +62,103 @@ int main(int argc, char *argv[])
         vector<char> guessed;
         int guesses = 0;
 
-        vector<string> possibleWords;
-        possibleWords.reserve(10000);
-
-        // all words it could be by length
-        #pragma omp parallel for num_threads(thread_count)
-        for (int i = 0; i < words.size(); i++)
+        while (revealedText.find('_') != string::npos)
         {
-            // length check
-            if (words[i].length() != len)
-                continue;
 
-            // check if it contains a letter that was already guessed
-            for (char g : guessed) // TODO change this to just check the previously guessed letter
+            vector<string> possibleWords;
+            possibleWords.reserve(10000);
+
+// all words it could be by length
+#pragma omp parallel for num_threads(thread_count)
+            for (int i = 0; i < words.size(); i++)
             {
-                if (words[i].find(g))
+                // length check
+                if (words[i].length() != len)
                     continue;
+
+                // check if it contains a letter that was already guessed
+                for (char g : guessed) // TODO change this to just check the previously guessed letter
+                {
+                    if (words[i].find(g) != string::npos)
+                        continue;
+                }
+
+                // check specific letter locations
+                for (int j = 0; j < len; j++)
+                {
+                    if (revealedText[j] != '_' && revealedText[j] != words[i][j])
+                        continue;
+                }
+
+// add word as a possible word
+#pragma omp critical
+                {
+                    possibleWords.push_back(words[i]);
+                }
             }
 
-            // check specific letter locations
+            // Check how many words would be possible if the letter is not in the word
+            map<char, int> possibleWordCount;
+            for (char letter : letters)
+            {
+                possibleWordCount.insert(pair<char, int>(letter, 0));
+
+#pragma omp parallel for num_threads(thread_count)
+                for (int j = 0; j < possibleWords.size(); j++)
+                {
+                    if (words[j].find(letter) == string::npos)
+                    {
+#pragma omp critical
+                        {
+                            possibleWordCount.at(letter)++;
+                        }
+                    }
+                }
+            }
+
+            // Select which letter minimizes this number
+            map<char, int>::iterator itr;
+            char smallestLetter = '_';
+            int smallestCount = 380000;
+            for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
+            {
+                if (itr->second < smallestCount)
+                {
+                    smallestLetter = itr->first;
+                    smallestCount = itr->second;
+                }
+            }
+
+            // Guess letter
+            guessed.push_back(smallestLetter);
+            for (int j = 0; j < 26; j++)
+            {
+                if (letters[j] == smallestLetter)
+                {
+                    letters.erase(letters.begin() + j);
+                    break;
+                }
+            }
+
+            // reveal letters
+            bool correctGuess = false;
             for (int j = 0; j < len; j++)
             {
-                if (revealedText[j] != '_' && revealedText[j] != words[i][j])
-                    continue;
+                if (word[j] == smallestLetter)
+                {
+                    revealedText[j] = smallestLetter;
+                    correctGuess = true;
+                }
             }
-
-            // add word as possible
-            #pragma omp critical
+            if (!correctGuess)
             {
-                possibleWords.push_back(words[i]);
+                guesses++;
             }
         }
-
-        // Check how many words would be possible if the letter is not in the word
-        map<char, int> possibleWordCount;
-        for (char letter : letters)
-        {
-            possibleWordCount.insert(pair<char, int>(letter, 0));
-
-            #pragma omp parallel for num_threads(thread_count)
-            for (int j = 0; j < possibleWords.size(); i++)
-            {
-                if (!words[j].find(letter))
-                    possibleWordCount.at(letter)++;
-            }
-        }
-
-        // Select which letter minimizes this number
-        map<char, int>::iterator itr;
-        char smallestLetter = '_';
-        int smallestCount = 380000;
-        for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
-        {
-            if (itr->second < smallestCount)
-            {
-                smallestLetter = itr->first;
-                smallestCount = itr->second;
-            }
-        }
-
-        // Guess letter
-        guessed.push_back(smallestLetter);
-        for (int j = 0; j < 26; j++)
-        {
-            if (letters[j] == smallestLetter)
-            {
-                letters.erase(letters.begin() + j);
-                break;
-            }
-        }
-
-        // reveal letters
-        bool correctGuess = false;
-        for (int j = 0; j < len; j++)
-        {
-            if (words[i][j] == smallestLetter)
-            {
-                revealedText[j] = smallestLetter;
-                correctGuess = true;
-            }
-        }
-        if (!correctGuess)
-        {
-            guesses++;
-        }
+        ofstream outfile;
+        outfile.open("results.txt", ios::app);
+        outfile << revealedText << ", " << guesses << endl;
+        outfile.close();
     }
 
     return 0;
