@@ -1,5 +1,8 @@
 #!/bin/bash
 
 g++ HangmanStrategy.cpp -o hangman -fopenmp
-./hangman 8
+for i in 1 2 4 8; do
+    echo "Running with $i threads:"
+    ./hangman $i
+done
 rm hangman
