@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
         vector<char> letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
         vector<char> guessed;
         int guesses = 0;
+        char smallestLetter = '_';
 
         while (revealedText.find('_') != string::npos)
         {
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
                     continue;
 
                 // check if it contains a letter that was already guessed
-                for (char g : guessed) // TODO change this to just check the previously guessed letter
+                for (char g : guessed) // TODO make an ever-decreasing list of possibilities
                 {
                     if (words[i].find(g) != string::npos)
                         continue;
@@ -116,7 +117,7 @@ int main(int argc, char *argv[])
 
             // Select which letter minimizes this number
             map<char, int>::iterator itr;
-            char smallestLetter = '_';
+            smallestLetter = '_';
             int smallestCount = RESERVED_SIZE;
             for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
             {
