@@ -62,12 +62,13 @@ int main(int argc, char *argv[])
 
         vector<char> letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
         vector<char> guessed;
+        int guesses = 0;
 
         vector<string> possibleWords;
         possibleWords.reserve(10000);
 
-        // all words it could be by length
-        #pragma omp parallel for num_threads(thread_count)
+// all words it could be by length
+#pragma omp parallel for num_threads(thread_count)
         for (int i = 0; i < words.size(); i++)
         {
             // length check
@@ -77,19 +78,19 @@ int main(int argc, char *argv[])
             // check if it contains a letter that was already guessed
             for (char g : guessed) // TODO change this to just check the previously guessed letter
             {
-                if(words[i].find(g))
+                if (words[i].find(g))
                     continue;
             }
 
             // check specific letter locations
             for (int j = 0; j < len; j++)
             {
-                if(revealedText[j] != '_' && revealedText[j] != words[i][j])
+                if (revealedText[j] != '_' && revealedText[j] != words[i][j])
                     continue;
             }
 
-            // add word as possible
-            #pragma omp critical
+// add word as possible
+#pragma omp critical
             {
                 possibleWords.push_back(words[i]);
             }
@@ -100,7 +101,7 @@ int main(int argc, char *argv[])
         for (char letter : letters)
         {
             possibleWordCount.insert(pair<char, int>(letter, 0));
-            if(!words[i].find(letter))
+            if (!words[i].find(letter))
                 possibleWordCount.at(letter)++;
         }
 
@@ -110,10 +111,29 @@ int main(int argc, char *argv[])
         int smallestCount = 380000;
         for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
         {
-            if(itr->second < smallestCount)
+            if (itr->second < smallestCount)
             {
                 smallestLetter = itr->first;
                 smallestCount = itr->second;
+            }
+        }
+
+        // Guess letter
+        for (int j = 0; j < 26; j++)
+        {
+            if (letters[j] == smallestLetter)
+            {
+                letters.erase(letters.begin() + j);
+                break;
+            }
+        }
+        guessed.push_back(smallestLetter);
+        guesses++;
+        for (int j = 0; j < len; j++)
+        {
+            if (words[i][j] == smallestLetter)
+            {
+                revealedText[j] = smallestLetter;
             }
         }
     }
