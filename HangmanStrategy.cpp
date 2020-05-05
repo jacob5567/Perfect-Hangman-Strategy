@@ -70,35 +70,38 @@ int main(int argc, char *argv[])
         int guesses = 0;
         char smallestLetter = '_';
 
+        vector<string> possibleWords;
+        possibleWords.reserve(RESERVED_SIZE / 3);
+        possibleWords = words;
+
         while (revealedText.find('_') != string::npos)
         {
-
-            vector<string> possibleWords;
-            possibleWords.reserve(RESERVED_SIZE / 3);
-
+            vector<string> newPossibleWords;
             // all words it could be by length
-            for (int i = 0; i < words.size(); i++)
+            for (int i = 0; i < possibleWords.size(); i++)
             {
                 // length check
-                if (words[i].length() != len)
+                if (possibleWords[i].length() != len)
                     continue;
 
                 // check if it contains a letter that was already guessed
-                for (char g : guessed) // TODO make an ever-decreasing list of possibilities
+                for (char g : guessed)
                 {
-                    if (words[i].find(g) != string::npos)
+                    if (possibleWords[i].find(g) != string::npos)
                         continue;
                 }
 
                 // check specific letter locations
                 for (int j = 0; j < len; j++)
                 {
-                    if (revealedText[j] != '_' && revealedText[j] != words[i][j])
+                    if (revealedText[j] != '_' && revealedText[j] != possibleWords[i][j])
                         continue;
                 }
 
-                possibleWords.push_back(words[i]);
+                newPossibleWords.push_back(words[i]);
             }
+
+            possibleWords = newPossibleWords;
 
             // Check how many words would be possible if the letter is not in the words[wordIndex]
             map<char, int> possibleWordCount;
