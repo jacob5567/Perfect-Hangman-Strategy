@@ -53,3 +53,7 @@ dkms.conf
 
 # VSCode
 .vscode/*
+
+# Excel
+*.xlsx
+*.tmp

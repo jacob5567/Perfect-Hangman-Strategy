@@ -11,15 +11,15 @@
 
 using namespace std;
 
-#define RESERVED_SIZE 1000
-#define INPUT_FILE "dictionary_small.txt"
+#define RESERVED_SIZE 10000
+#define INPUT_FILE "dictionary.txt"
 #define OUTPUT_FILE "results_small.txt"
 
 int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        cout << "Usage: <executable> <number of threads>";
+        std::cout << "Usage: <executable> <number of threads>";
         return 1;
     }
     int thread_count = atoi(argv[1]);
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        cout << "Unable to open file." << endl;
+        std::cout << "Unable to open file." << std::endl;
         return 1;
     }
 
@@ -54,9 +54,10 @@ int main(int argc, char *argv[])
     double time2 = omp_get_wtime();
 
     // Working through words
-    for (string word : words)
+#pragma omp parallel for num_threads(thread_count)
+    for (int wordIndex = 0; wordIndex < words.size(); wordIndex++)
     {
-        int len = word.length();
+        int len = words[wordIndex].length();
 
         string revealedText = "";
         for (int i = 0; i < len; i++)
@@ -67,6 +68,7 @@ int main(int argc, char *argv[])
         vector<char> letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
         vector<char> guessed;
         int guesses = 0;
+        char smallestLetter = '_';
 
         while (revealedText.find('_') != string::npos)
         {
@@ -74,8 +76,7 @@ int main(int argc, char *argv[])
             vector<string> possibleWords;
             possibleWords.reserve(RESERVED_SIZE / 3);
 
-// all words it could be by length
-#pragma omp parallel for num_threads(thread_count)
+            // all words it could be by length
             for (int i = 0; i < words.size(); i++)
             {
                 // length check
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
                     continue;
 
                 // check if it contains a letter that was already guessed
-                for (char g : guessed) // TODO change this to just check the previously guessed letter
+                for (char g : guessed) // TODO make an ever-decreasing list of possibilities
                 {
                     if (words[i].find(g) != string::npos)
                         continue;
@@ -96,35 +97,27 @@ int main(int argc, char *argv[])
                         continue;
                 }
 
-// add word as a possible word
-#pragma omp critical
-                {
-                    possibleWords.push_back(words[i]);
-                }
+                possibleWords.push_back(words[i]);
             }
 
-            // Check how many words would be possible if the letter is not in the word
+            // Check how many words would be possible if the letter is not in the words[wordIndex]
             map<char, int> possibleWordCount;
             for (char letter : letters)
             {
                 possibleWordCount.insert(pair<char, int>(letter, 0));
 
-#pragma omp parallel for num_threads(thread_count)
                 for (int j = 0; j < possibleWords.size(); j++)
                 {
                     if (words[j].find(letter) == string::npos)
                     {
-#pragma omp critical
-                        {
-                            possibleWordCount.at(letter)++;
-                        }
+                        possibleWordCount.at(letter)++;
                     }
                 }
             }
 
             // Select which letter minimizes this number
             map<char, int>::iterator itr;
-            char smallestLetter = '_';
+            smallestLetter = '_';
             int smallestCount = RESERVED_SIZE;
             for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
             {
@@ -150,7 +143,7 @@ int main(int argc, char *argv[])
             bool correctGuess = false;
             for (int j = 0; j < len; j++)
             {
-                if (word[j] == smallestLetter)
+                if (words[wordIndex][j] == smallestLetter)
                 {
                     revealedText[j] = smallestLetter;
                     correctGuess = true;
@@ -161,15 +154,19 @@ int main(int argc, char *argv[])
                 guesses++;
             }
         }
-        ofstream outfile;
-        outfile.open(OUTPUT_FILE, ios::app);
-        outfile << revealedText << ", " << guesses << endl;
-        outfile.close();
+
+#pragma omp critical
+        {
+            ofstream outfile;
+            outfile.open(OUTPUT_FILE, ios::app);
+            outfile << revealedText << ", " << guesses << std::endl;
+            outfile.close();
+        }
     }
     double time3 = omp_get_wtime();
 
-    cout << "Read time: " << time2 - time1 << endl;
-    cout << "Processing time: " << time3 - time2 << endl;
+    std::cout << "Read time: " << time2 - time1 << std::endl;
+    std::cout << "Processing time: " << time3 - time2 << std::endl;
 
     return 0;
 }
