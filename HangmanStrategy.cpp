@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
 
     vector<string> words;
     string wordBuffer;
-    cout << words.max_size() << endl;
     words.reserve(380000);
     ifstream dictionaryFile;
     dictionaryFile.open("words_alpha.txt");
@@ -67,8 +66,8 @@ int main(int argc, char *argv[])
         vector<string> possibleWords;
         possibleWords.reserve(10000);
 
-// all words it could be by length
-#pragma omp parallel for num_threads(thread_count)
+        // all words it could be by length
+        #pragma omp parallel for num_threads(thread_count)
         for (int i = 0; i < words.size(); i++)
         {
             // length check
@@ -89,8 +88,8 @@ int main(int argc, char *argv[])
                     continue;
             }
 
-// add word as possible
-#pragma omp critical
+            // add word as possible
+            #pragma omp critical
             {
                 possibleWords.push_back(words[i]);
             }
@@ -101,8 +100,13 @@ int main(int argc, char *argv[])
         for (char letter : letters)
         {
             possibleWordCount.insert(pair<char, int>(letter, 0));
-            if (!words[i].find(letter))
-                possibleWordCount.at(letter)++;
+
+            #pragma omp parallel for num_threads(thread_count)
+            for (int j = 0; j < possibleWords.size(); i++)
+            {
+                if (!words[j].find(letter))
+                    possibleWordCount.at(letter)++;
+            }
         }
 
         // Select which letter minimizes this number
@@ -119,6 +123,7 @@ int main(int argc, char *argv[])
         }
 
         // Guess letter
+        guessed.push_back(smallestLetter);
         for (int j = 0; j < 26; j++)
         {
             if (letters[j] == smallestLetter)
@@ -127,14 +132,20 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-        guessed.push_back(smallestLetter);
-        guesses++;
+
+        // reveal letters
+        bool correctGuess = false;
         for (int j = 0; j < len; j++)
         {
             if (words[i][j] == smallestLetter)
             {
                 revealedText[j] = smallestLetter;
+                correctGuess = true;
             }
+        }
+        if (!correctGuess)
+        {
+            guesses++;
         }
     }
 
