@@ -5,6 +5,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <map>
+#include <iterator>
 #include <omp.h>
 
 using namespace std;
@@ -60,6 +62,7 @@ int main(int argc, char *argv[])
 
         vector<char> letters = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
         vector<char> guessed;
+
         vector<string> possibleWords;
         possibleWords.reserve(10000);
 
@@ -89,6 +92,28 @@ int main(int argc, char *argv[])
             #pragma omp critical
             {
                 possibleWords.push_back(words[i]);
+            }
+        }
+
+        // Check how many words would be possible if the letter is not in the word
+        map<char, int> possibleWordCount;
+        for (char letter : letters)
+        {
+            possibleWordCount.insert(pair<char, int>(letter, 0));
+            if(!words[i].find(letter))
+                possibleWordCount.at(letter)++;
+        }
+
+        // Select which letter minimizes this number
+        map<char, int>::iterator itr;
+        char smallestLetter = '_';
+        int smallestCount = 380000;
+        for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
+        {
+            if(itr->second < smallestCount)
+            {
+                smallestLetter = itr->first;
+                smallestCount = itr->second;
             }
         }
     }
