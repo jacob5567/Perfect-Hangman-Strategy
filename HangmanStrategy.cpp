@@ -11,6 +11,9 @@
 
 using namespace std;
 
+#define RESERVED_SIZE 10000
+#define INPUT_FILE "dictionary.txt"
+
 int main(int argc, char *argv[])
 {
     if (argc != 2)
@@ -20,13 +23,13 @@ int main(int argc, char *argv[])
     }
     int thread_count = atoi(argv[1]);
 
-    cout << "num threads: " << thread_count << endl;
+    double time1 = omp_get_wtime();
 
     vector<string> words;
     string wordBuffer;
-    words.reserve(380000);
+    words.reserve(RESERVED_SIZE);
     ifstream dictionaryFile;
-    dictionaryFile.open("words_alpha.txt");
+    dictionaryFile.open(INPUT_FILE);
     int i = 0;
     if (dictionaryFile.is_open())
     {
@@ -47,6 +50,8 @@ int main(int argc, char *argv[])
 
     dictionaryFile.close();
 
+    double time2 = omp_get_wtime();
+
     // Working through words
     for (string word : words)
     {
@@ -66,7 +71,7 @@ int main(int argc, char *argv[])
         {
 
             vector<string> possibleWords;
-            possibleWords.reserve(10000);
+            possibleWords.reserve(RESERVED_SIZE / 3);
 
 // all words it could be by length
 #pragma omp parallel for num_threads(thread_count)
@@ -119,7 +124,7 @@ int main(int argc, char *argv[])
             // Select which letter minimizes this number
             map<char, int>::iterator itr;
             char smallestLetter = '_';
-            int smallestCount = 380000;
+            int smallestCount = RESERVED_SIZE;
             for (itr = possibleWordCount.begin(); itr != possibleWordCount.end(); itr++)
             {
                 if (itr->second < smallestCount)
@@ -160,6 +165,10 @@ int main(int argc, char *argv[])
         outfile << revealedText << ", " << guesses << endl;
         outfile.close();
     }
+    double time3 = omp_get_wtime();
+
+    cout << "Read time: " << time2 - time1 << endl;
+    cout << "Processing time: " << time3 - time2 << endl;
 
     return 0;
 }
